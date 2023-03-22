@@ -1,5 +1,35 @@
 import pandas as pd
 import re
+from flask import Flask,jsonify
+from flask import request
+from flasgger import Swagger,LazyString,LazyJSONEncoder
+from flasgger import swag_from
+
+app=Flask(__name__)
+app.json_encoder=LazyJSONEncoder
+swagger_template=dict(
+    info={
+        'title':LazyString(lambda:'Dokumentasi API Untuk Cleansing Data Menggunakan RegEx'),
+        'version':LazyString(lambda:'1.0.0'),
+        'description':LazyString(lambda:'Dokumentasi API'),
+    },
+    host=LazyString(lambda:request.host)
+)
+
+swagger_config={
+    'headers':[],
+    'specs':[
+        {
+            'endpoint':'docs',
+            'route':'/docs.json',
+        }
+    ],
+    'static_url_path':'/flasgger_static',
+    'swagger_ui':True,
+    'specs_route':'/docs/'
+}
+
+swagger=Swagger(app,template=swagger_template,config=swagger_config)
 
 #Membaca semua dataset yang ada
 alay_dict=pd.read_csv("Asset Challenge/new_kamusalay.csv",encoding='latin1',header=None)
@@ -12,6 +42,42 @@ print(kasar_dict)
 
 alay_dict_map = dict(zip(alay_dict['Original'], alay_dict['Baku']))
 kasar_dict_map = dict(zip(kasar_dict['ABUSIVE'],kasar_dict['Kata_Sensor']))
+
+@swag_from("docs/hello_world.yml",methods=['GET'])
+@app.route('/',methods=['GET'])
+def Hello_world():
+    json_response={
+        'status_code':200,
+        'description':"Menyapa",
+        'data':'Hello World',
+    }
+    response_data=jsonify(json_response)
+    return response_data
+
+@swag_from("docs/text_processing.yml")
+@app.route('/text-processing',methods=['POST'])
+def text_processing():
+    global text
+    text=request.form.get('text')
+    json_response={
+        'status_code':200,
+        'description':'Text Yang Sudah Di Process',
+        'data':preprocess(text)
+    }
+    response_data=jsonify(json_response)
+    return response_data
+
+@swag_from("docs/tampilkan_text.yml")
+@app.route('/tampilkan-text',methods=['GET'])
+def tampilkanText():
+    json_response={
+        'status_code':200,
+        'description':'Text Asli',
+        'data':text
+    }
+    response_data=jsonify(json_response)
+    return response_data
+
 def normalize_alay(text):
     return ' '.join([alay_dict_map[word] if word in alay_dict_map else word for word in text.split(' ')])
 
@@ -67,3 +133,4 @@ def program():
 
 if __name__=="__main__":
     program()
+    app.run()
