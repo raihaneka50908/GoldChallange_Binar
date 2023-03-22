@@ -1,13 +1,13 @@
 tags:
-  -name: Masukan Teks Bebas, Keluaran Adalah Teks Yang Telah Di Cleansing
+  -name: Masukan File CSV, Keluaran Nya Adalah File CSV dalam Bentuk JSON Yang Telah di Cleansing
 get:
-  description: Text Yang Akan di Preprocess
+  description: File Yang Akan di Preprocess
 
 parameters:
-  - name: text
+  - name: file
     in: formData
     required: true
-    type: string
+    type: file
 responses:
   '200':
     description: Successful response

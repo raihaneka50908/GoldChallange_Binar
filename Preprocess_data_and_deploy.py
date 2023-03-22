@@ -97,12 +97,16 @@ def upload_csv():
     
     # membaca file CSV menggunakan Pandas
     try:
-        data = pd.read_csv(file)
+        data = pd.read_csv(file,encoding='latin1')
+        data['Before']=data['Tweet']
+        data['Tweet']=data['Tweet'].apply(preprocess)
+        
     except Exception as e:
         return jsonify({'error': 'Gagal membaca file CSV: ' + str(e)})
     
     # mengembalikan data dalam format JSON
     return jsonify({'data': data.to_dict(orient='records')})
+    
 
 def normalize_alay(text):
     return ' '.join([alay_dict_map[word] if word in alay_dict_map else word for word in text.split(' ')])
