@@ -1,7 +1,7 @@
 tags:
-  -name: Tampilkan Text Asli
+  -name: Cleansing CSV
 get:
-  description: Text Asli
+  description: File Yang Akan di Preprocess
 responses:
   '200':
     description: Successful response
