@@ -4,10 +4,6 @@ from flask import Flask,jsonify
 from flask import request
 from flasgger import Swagger,LazyString,LazyJSONEncoder
 from flasgger import swag_from
-import csv
-import json
-import tempfile
-import os
 
 app=Flask(__name__)
 app.json_encoder=LazyJSONEncoder
@@ -46,19 +42,6 @@ print(kasar_dict)
 
 alay_dict_map = dict(zip(alay_dict['Original'], alay_dict['Baku']))
 kasar_dict_map = dict(zip(kasar_dict['ABUSIVE'],kasar_dict['Kata_Sensor']))
-
-# Upload directory
-UPLOAD_FOLDER = 'uploads'
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-
-ALLOWED_EXTENSIONS = {'csv', 'txt', 'json'}
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
 
 @swag_from("docs/hello_world.yml",methods=['GET'])
 @app.route('/',methods=['GET'])
@@ -99,7 +82,6 @@ def tampilkanText():
 @app.route('/upload-csv', methods=['POST'])
 def upload_csv():
     # memeriksa apakah file CSV diunggah
-    global file
     if 'file' not in request.files:
         return jsonify({'error': 'File tidak ditemukan.'})
     
@@ -115,19 +97,12 @@ def upload_csv():
     
     # membaca file CSV menggunakan Pandas
     try:
-        data = pd.read_csv(file,encoding='latin1')
+        data = pd.read_csv(file)
     except Exception as e:
         return jsonify({'error': 'Gagal membaca file CSV: ' + str(e)})
     
-    json_response={
-        'status_code':200,
-        'Tweet':data['Tweet'].apply(preprocess)
-    }
-    
     # mengembalikan data dalam format JSON
-    return jsonify({'data': json_response})
-
-
+    return jsonify({'data': data.to_dict(orient='records')})
 
 def normalize_alay(text):
     return ' '.join([alay_dict_map[word] if word in alay_dict_map else word for word in text.split(' ')])
@@ -165,10 +140,6 @@ def preprocess(TextYangInginDiPreProcess):
     text=sensor_kata_kasar(text)
     return text
 
-#Preprocess DataFrame
-def preproces_data_frame(masukan):
-    masukan=masukan.drop_duplicates()
-    return masukan
 
 #Keluaran dari fungsi ini adalah sebuah file csv yang nanti akan diolah dengan menggunakann jupyter notebook untuk analisis lebih lanjut
 def program():
