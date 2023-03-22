@@ -4,6 +4,10 @@ from flask import Flask,jsonify
 from flask import request
 from flasgger import Swagger,LazyString,LazyJSONEncoder
 from flasgger import swag_from
+import csv
+import json
+import tempfile
+import os
 
 app=Flask(__name__)
 app.json_encoder=LazyJSONEncoder
@@ -43,6 +47,19 @@ print(kasar_dict)
 alay_dict_map = dict(zip(alay_dict['Original'], alay_dict['Baku']))
 kasar_dict_map = dict(zip(kasar_dict['ABUSIVE'],kasar_dict['Kata_Sensor']))
 
+# Upload directory
+UPLOAD_FOLDER = 'uploads'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+
+ALLOWED_EXTENSIONS = {'csv', 'txt', 'json'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
 @swag_from("docs/hello_world.yml",methods=['GET'])
 @app.route('/',methods=['GET'])
 def Hello_world():
@@ -57,7 +74,6 @@ def Hello_world():
 @swag_from("docs/text_processing.yml")
 @app.route('/text-processing',methods=['POST'])
 def text_processing():
-    global text
     text=request.form.get('text')
     json_response={
         'status_code':200,
@@ -77,6 +93,32 @@ def tampilkanText():
     }
     response_data=jsonify(json_response)
     return response_data
+
+@swag_from('docs/upload_csv.yml')
+@app.route('/upload-csv', methods=['POST'])
+def upload_csv():
+    # memeriksa apakah file CSV diunggah
+    if 'file' not in request.files:
+        return jsonify({'error': 'File tidak ditemukan.'})
+    
+    file = request.files['file']
+    
+    # memeriksa apakah file CSV kosong
+    if file.filename == '':
+        return jsonify({'error': 'File kosong.'})
+    
+    # memeriksa apakah file memiliki ekstensi .csv
+    if not file.filename.endswith('.csv'):
+        return jsonify({'error': 'File harus memiliki ekstensi .csv.'})
+    
+    # membaca file CSV menggunakan Pandas
+    try:
+        data = pd.read_csv(file)
+    except Exception as e:
+        return jsonify({'error': 'Gagal membaca file CSV: ' + str(e)})
+    
+    # mengembalikan data dalam format JSON
+    return jsonify({'data': data.to_dict(orient='records')})
 
 def normalize_alay(text):
     return ' '.join([alay_dict_map[word] if word in alay_dict_map else word for word in text.split(' ')])
@@ -113,7 +155,6 @@ def preprocess(TextYangInginDiPreProcess):
     #Tahap kelima adalah mensensor kata kasar dengan kata "disensor"
     text=sensor_kata_kasar(text)
     return text
-
 
 
 #Keluaran dari fungsi ini adalah sebuah file csv yang nanti akan diolah dengan menggunakann jupyter notebook untuk analisis lebih lanjut
