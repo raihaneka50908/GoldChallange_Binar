@@ -1,5 +1,5 @@
 tags:
-  -name: Tampilkan Teks Yang Belum Di Cleansing
+  - name: Tampilkan Teks Yang Belum Di Cleansing
 get:
   description: Text Asli
 responses:

@@ -81,6 +81,7 @@ def tampilkanText():
 @swag_from('docs/upload_csv.yml')
 @app.route('/upload-csv', methods=['POST'])
 def upload_csv():
+    """
     # memeriksa apakah file CSV diunggah
     if 'file' not in request.files:
         return jsonify({'error': 'File tidak ditemukan.'})
@@ -105,7 +106,20 @@ def upload_csv():
         return jsonify({'error': 'Gagal membaca file CSV: ' + str(e)})
     
     # mengembalikan data dalam format JSON
-    return jsonify({'data': data.to_dict(orient='records')})
+    """
+    file = request.files.getlist('file')[0]
+    df = pd.read_csv(file,encoding='latin-1')
+    df['Tweet']=df['Tweet'].apply(preprocess)
+
+    texts=df['Tweet'].to_list()
+
+    json_response={
+        'status_code':200,
+        'description':'Tweet Yang Sudah Di Cleansing',
+        'data':texts
+    }
+    response_data=jsonify(json_response)
+    return response_data
     
 
 def normalize_alay(text):
