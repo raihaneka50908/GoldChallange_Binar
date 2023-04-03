@@ -4,6 +4,7 @@ from flask import Flask,jsonify
 from flask import request
 from flasgger import Swagger,LazyString,LazyJSONEncoder
 from flasgger import swag_from
+import sqlite3
 
 app=Flask(__name__)
 app.json_encoder=LazyJSONEncoder
@@ -58,13 +59,22 @@ def Hello_world():
 @app.route('/text-processing',methods=['POST'])
 def text_processing():
     global text
+    conn=sqlite3.connect('Database_Challange.db')
+    cursor=conn.cursor()
     text=request.form.get('text')
+    text1=text
+    text1=str(text1)
+    text2=preprocess(text1)
+    text2=str(text2)
     json_response={
         'status_code':200,
         'description':'Text Yang Sudah Di Process',
-        'data':preprocess(text)
+        'data':text2
     }
     response_data=jsonify(json_response)
+    conn.execute("INSERT INTO Kata_Kata (id,kata_sebelum_cleansing,kata_setelah_cleansing) VALUES(NULL,?,?)",(text1,text2))
+    conn.commit()
+    conn.close()
     return response_data
 
 @swag_from("docs/tampilkan_text.yml")
@@ -81,32 +91,7 @@ def tampilkanText():
 @swag_from('docs/upload_csv.yml')
 @app.route('/upload-csv', methods=['POST'])
 def upload_csv():
-    """
-    # memeriksa apakah file CSV diunggah
-    if 'file' not in request.files:
-        return jsonify({'error': 'File tidak ditemukan.'})
     
-    file = request.files['file']
-    
-    # memeriksa apakah file CSV kosong
-    if file.filename == '':
-        return jsonify({'error': 'File kosong.'})
-    
-    # memeriksa apakah file memiliki ekstensi .csv
-    if not file.filename.endswith('.csv'):
-        return jsonify({'error': 'File harus memiliki ekstensi .csv.'})
-    
-    # membaca file CSV menggunakan Pandas
-    try:
-        data = pd.read_csv(file,encoding='latin1')
-        data['Before']=data['Tweet']
-        data['Tweet']=data['Tweet'].apply(preprocess)
-        
-    except Exception as e:
-        return jsonify({'error': 'Gagal membaca file CSV: ' + str(e)})
-    
-    # mengembalikan data dalam format JSON
-    """
     file = request.files.getlist('file')[0]
     df = pd.read_csv(file,encoding='latin-1')
     df['Tweet']=df['Tweet'].apply(preprocess)
@@ -172,6 +157,16 @@ def program():
     print(df_data)
 
     df_data.to_csv("Tweet_berbahasa_indonesia_yang_telah__dipreprocess_dan_disensor.csv")
+
+    conn=sqlite3.connect('Database_Challange.db')
+    cursor=conn.cursor()
+    try:
+        cursor.execute('''CREATE TABLE Kata_Kata (id INTEGER PRIMARY KEY AUTOINCREMENT, kata_sebelum_cleansing TEXT, kata_setelah_cleansing TEXT)''')
+        print("Tabel Berhasil Dibuat")
+    except sqlite3.OperationalError:
+        print("Tabel Telah Dibuat")
+    conn.commit()
+    conn.close()
     
 
 if __name__=="__main__":
