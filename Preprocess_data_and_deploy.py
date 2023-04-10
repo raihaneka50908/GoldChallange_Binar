@@ -69,7 +69,8 @@ def text_processing():
     json_response={
         'status_code':200,
         'description':'Text Yang Sudah Di Process',
-        'data':text2
+        'data_before_cleansing':text1,
+        'data_after_cleansing':text2
     }
     response_data=jsonify(json_response)
     conn.execute("INSERT INTO Kata_Kata (id,kata_sebelum_cleansing,kata_setelah_cleansing) VALUES(NULL,?,?)",(text1,text2))
@@ -82,8 +83,9 @@ def text_processing():
 def tampilkanText():
     json_response={
         'status_code':200,
-        'description':'Text Asli',
-        'data':text
+        'description':'Text Asli dan Text Cleansing',
+        'data_before_cleansing':text,
+        'data_after_cleansing':preprocess(text)
     }
     response_data=jsonify(json_response)
     return response_data
@@ -94,6 +96,8 @@ def upload_csv():
     
     file = request.files.getlist('file')[0]
     df = pd.read_csv(file,encoding='latin-1')
+    texts_kotor=df['Tweet']
+    texts_kotor=texts_kotor.to_list()
     df['Tweet']=df['Tweet'].apply(preprocess)
 
     texts=df['Tweet'].to_list()
@@ -101,9 +105,19 @@ def upload_csv():
     json_response={
         'status_code':200,
         'description':'Tweet Yang Sudah Di Cleansing',
-        'data':texts
+        'data_before_cleansing':texts_kotor,
+        'data_after_cleansing':texts
     }
+    kumpulan_kata=list(zip(texts_kotor,texts))
     response_data=jsonify(json_response)
+
+    conn=sqlite3.connect('Database_Challange.db')
+    cursor=conn.cursor()
+    cursor.executemany("INSERT INTO Kata_Kata (id,kata_sebelum_cleansing, kata_setelah_cleansing) VALUES (NULL,?, ?)",kumpulan_kata)
+    
+    conn.commit()
+    conn.close()
+    
     return response_data
     
 
